@@ -6,15 +6,19 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.navigation.findNavController
 import androidx.navigation.ui.AppBarConfiguration
 import androidx.navigation.ui.navigateUp
-import androidx.navigation.ui.setupActionBarWithNavController
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 import android.view.Menu
 import android.view.MenuItem
+import android.widget.EditText
+import androidx.appcompat.app.AlertDialog
 import com.example.stockselectionapp.databinding.ActivityMainBinding
 
 class MainActivity : AppCompatActivity() {
 
-    private lateinit var appBarConfiguration: AppBarConfiguration
     private lateinit var binding: ActivityMainBinding
+    private lateinit var stockAdapter: StockAdapter
+    private val stockSymbols = mutableListOf<String>()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -24,14 +28,29 @@ class MainActivity : AppCompatActivity() {
 
         setSupportActionBar(binding.toolbar)
 
-        val navController = findNavController(R.id.nav_host_fragment_content_main)
-        appBarConfiguration = AppBarConfiguration(navController.graph)
-        setupActionBarWithNavController(navController, appBarConfiguration)
+        // Set up RecyclerView and adapter
+        stockAdapter = StockAdapter(stockSymbols)
+        val recyclerView: RecyclerView = binding.root.findViewById(R.id.recyclerView)
+        recyclerView.layoutManager = LinearLayoutManager(this)
+        recyclerView.adapter = stockAdapter
+    }
+    private fun showAddStockDialog() {
+        val input = EditText(this)
+        val alertDialog = AlertDialog.Builder(this)
+            .setTitle("Add Stock Symbol")
+            .setMessage("Enter the stock symbol:")
+            .setView(input)
+            .setPositiveButton("Add") { _, _ ->
+                val symbol = input.text.toString().trim()
+                if (symbol.isNotEmpty()) {
+                    stockSymbols.add(symbol)
+                    stockAdapter.notifyItemInserted(stockSymbols.size - 1)
+                }
+            }
+            .setNegativeButton("Cancel", null)
+            .create()
 
-        binding.fab.setOnClickListener { view ->
-            Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
-                .setAction("Action", null).show()
-        }
+        alertDialog.show()
     }
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
@@ -50,9 +69,9 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    override fun onSupportNavigateUp(): Boolean {
-        val navController = findNavController(R.id.nav_host_fragment_content_main)
-        return navController.navigateUp(appBarConfiguration)
-                || super.onSupportNavigateUp()
-    }
+//    override fun onSupportNavigateUp(): Boolean {
+//        val navController = findNavController(R.id.nav_host_fragment_content_main)
+//        return navController.navigateUp(appBarConfiguration)
+//                || super.onSupportNavigateUp()
+//    }
 }
