@@ -33,6 +33,11 @@ class MainActivity : AppCompatActivity() {
         val recyclerView: RecyclerView = binding.root.findViewById(R.id.recyclerView)
         recyclerView.layoutManager = LinearLayoutManager(this)
         recyclerView.adapter = stockAdapter
+
+        binding.fab.setOnClickListener {
+            showAddStockDialog()
+        }
+
     }
     private fun showAddStockDialog() {
         val input = EditText(this)
