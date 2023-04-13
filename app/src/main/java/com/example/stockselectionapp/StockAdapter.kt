@@ -22,6 +22,11 @@ class StockAdapter(private val stockSymbols: MutableList<String>) : RecyclerView
         return stockSymbols.size
     }
 
+    fun removeItem(position: Int) {
+        stockSymbols.removeAt(position)
+        notifyItemRemoved(position)
+    }
+
     class StockViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         val tvStockSymbol: TextView = itemView.findViewById(R.id.tv_stock_symbol)
     }
