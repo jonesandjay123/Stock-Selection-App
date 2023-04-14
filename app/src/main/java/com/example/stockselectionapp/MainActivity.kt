@@ -7,9 +7,12 @@ import androidx.recyclerview.widget.RecyclerView
 import android.view.Menu
 import android.view.MenuItem
 import android.widget.EditText
+import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
 import androidx.recyclerview.widget.ItemTouchHelper
 import com.example.stockselectionapp.databinding.ActivityMainBinding
+import java.text.SimpleDateFormat
+import java.util.*
 
 class MainActivity : AppCompatActivity() {
 
@@ -31,6 +34,9 @@ class MainActivity : AppCompatActivity() {
         recyclerView.layoutManager = LinearLayoutManager(this)
         recyclerView.adapter = stockAdapter
 
+        // Set the version number text
+        initializeVersionTextView()
+
         binding.fab.setOnClickListener {
             showAddStockDialog()
         }
@@ -49,8 +55,20 @@ class MainActivity : AppCompatActivity() {
         })
 
         itemTouchHelper.attachToRecyclerView(recyclerView)
-
     }
+
+    private fun initializeVersionTextView() {
+        val versionTextView = findViewById<TextView>(R.id.version_text)
+        val packageInfo = packageManager.getPackageInfo(packageName, 0)
+        val versionName = packageInfo.versionName
+
+        val timestamp = System.currentTimeMillis()
+        val sdf = SimpleDateFormat("MMddHHmmss", Locale.getDefault())
+        val timeStampString = sdf.format(Date(timestamp)).takeLast(4)
+
+        versionTextView.text = "Version $versionName.$timeStampString"
+    }
+
     private fun showAddStockDialog() {
         val input = EditText(this)
         val alertDialog = AlertDialog.Builder(this)
