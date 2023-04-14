@@ -13,12 +13,30 @@ import androidx.recyclerview.widget.ItemTouchHelper
 import com.example.stockselectionapp.databinding.ActivityMainBinding
 import java.text.SimpleDateFormat
 import java.util.*
+import okhttp3.*
+import java.io.IOException
 
 class MainActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityMainBinding
     private lateinit var stockAdapter: StockAdapter
     private val stockSymbols = mutableListOf<String>()
+
+    private val client = OkHttpClient()
+
+    private fun readApiSecrets(): String {
+        return try {
+            assets.open("secrets.properties").use { inputStream ->
+                val properties = Properties().apply {
+                    load(inputStream)
+                }
+                properties.getProperty("access_token")
+                    ?: throw IllegalStateException("Failed to find 'access_token' in secrets.properties")
+            }
+        } catch (e: Exception) {
+            throw IllegalStateException("Failed to read secrets.properties", e)
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -69,6 +87,30 @@ class MainActivity : AppCompatActivity() {
         versionTextView.text = "Version $versionName.$timeStampString"
     }
 
+    private fun fetchStockData(symbol: String) {
+        val apiKey = readApiSecrets()
+        val url = "https://www.alphavantage.co/query?function=TIME_SERIES_INTRADAY&symbol=$symbol&interval=5min&apikey=$apiKey"
+
+        val request = Request.Builder()
+            .url(url)
+            .build()
+
+        client.newCall(request).enqueue(object : Callback {
+            override fun onFailure(call: Call, e: IOException) {
+                e.printStackTrace()
+            }
+
+            override fun onResponse(call: Call, response: Response) {
+                response.use {
+                    if (!response.isSuccessful) throw IOException("Unexpected code $response")
+
+                    val jsonData = response.body?.string()
+                    println(jsonData)
+                }
+            }
+        })
+    }
+
     private fun showAddStockDialog() {
         val input = EditText(this)
         val alertDialog = AlertDialog.Builder(this)
@@ -80,6 +122,7 @@ class MainActivity : AppCompatActivity() {
                 if (symbol.isNotEmpty()) {
                     stockSymbols.add(symbol)
                     stockAdapter.notifyItemInserted(stockSymbols.size - 1)
+                    fetchStockData(symbol)
                 }
             }
             .setNegativeButton("Cancel", null)
