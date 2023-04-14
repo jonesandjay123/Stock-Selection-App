@@ -11,18 +11,26 @@ import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
 import androidx.recyclerview.widget.ItemTouchHelper
 import com.example.stockselectionapp.databinding.ActivityMainBinding
+import kotlinx.coroutines.*
+import kotlin.coroutines.CoroutineContext
 import java.text.SimpleDateFormat
 import java.util.*
 import okhttp3.*
+import org.json.JSONObject
 import java.io.IOException
 
-class MainActivity : AppCompatActivity() {
+class MainActivity : AppCompatActivity(), CoroutineScope {
 
     private lateinit var binding: ActivityMainBinding
     private lateinit var stockAdapter: StockAdapter
     private val stockSymbols = mutableListOf<Stock>()
 
     private val client = OkHttpClient()
+    private val job = Job()
+
+    // 添加此行以將MainActivity設置為CoroutineScope
+    override val coroutineContext: CoroutineContext
+        get() = Dispatchers.Main + job
 
     private fun readApiSecrets(): String {
         return try {
@@ -87,7 +95,7 @@ class MainActivity : AppCompatActivity() {
         versionTextView.text = "Version $versionName.$timeStampString"
     }
 
-    private fun fetchStockData(symbol: String) {
+    private suspend fun fetchStockData(symbol: String): Map<String, Map<String, String>> {
         val apiKey = readApiSecrets()
         val url = "https://www.alphavantage.co/query?function=TIME_SERIES_INTRADAY&symbol=$symbol&interval=5min&apikey=$apiKey"
 
@@ -95,20 +103,20 @@ class MainActivity : AppCompatActivity() {
             .url(url)
             .build()
 
-        client.newCall(request).enqueue(object : Callback {
-            override fun onFailure(call: Call, e: IOException) {
-                e.printStackTrace()
-            }
+        return withContext(Dispatchers.IO) {
+            val response = client.newCall(request).execute()
+            val jsonData = response.body?.string()
+            val jsonObject = JSONObject(jsonData)
+            val timeSeries = jsonObject.getJSONObject("Time Series (5min)")
 
-            override fun onResponse(call: Call, response: Response) {
-                response.use {
-                    if (!response.isSuccessful) throw IOException("Unexpected code $response")
-
-                    val jsonData = response.body?.string()
-                    println(jsonData)
-                }
+            val result = mutableMapOf<String, Map<String, String>>()
+            for (key in timeSeries.keys()) {
+                val value = timeSeries.getJSONObject(key)
+                val entries = value.keys().asSequence().associateWith { value.getString(it) }
+                result[key] = entries
             }
-        })
+            result
+        }
     }
 
     private fun showAddStockDialog() {
@@ -120,9 +128,11 @@ class MainActivity : AppCompatActivity() {
             .setPositiveButton("Add") { _, _ ->
                 val symbol = input.text.toString().trim()
                 if (symbol.isNotEmpty()) {
-                    stockSymbols.add(Stock(symbol, mapOf()))
-                    stockAdapter.notifyItemInserted(stockSymbols.size - 1)
-                    fetchStockData(symbol)
+                    launch {
+                        val timeSeries = fetchStockData(symbol)
+                        stockSymbols.add(Stock(symbol, timeSeries))
+                        stockAdapter.notifyItemInserted(stockSymbols.size - 1)
+                    }
                 }
             }
             .setNegativeButton("Cancel", null)
@@ -145,6 +155,11 @@ class MainActivity : AppCompatActivity() {
             R.id.action_settings -> true
             else -> super.onOptionsItemSelected(item)
         }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        job.cancel()
     }
 
 }
