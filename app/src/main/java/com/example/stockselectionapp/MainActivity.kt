@@ -20,7 +20,7 @@ class MainActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityMainBinding
     private lateinit var stockAdapter: StockAdapter
-    private val stockSymbols = mutableListOf<String>()
+    private val stockSymbols = mutableListOf<Stock>()
 
     private val client = OkHttpClient()
 
@@ -120,7 +120,7 @@ class MainActivity : AppCompatActivity() {
             .setPositiveButton("Add") { _, _ ->
                 val symbol = input.text.toString().trim()
                 if (symbol.isNotEmpty()) {
-                    stockSymbols.add(symbol)
+                    stockSymbols.add(Stock(symbol, mapOf()))
                     stockAdapter.notifyItemInserted(stockSymbols.size - 1)
                     fetchStockData(symbol)
                 }
