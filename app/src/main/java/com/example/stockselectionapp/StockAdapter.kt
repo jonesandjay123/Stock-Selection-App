@@ -1,5 +1,7 @@
 package com.example.stockselectionapp
 
+import android.content.Context
+import android.content.res.Configuration
 import android.graphics.Color
 import android.view.LayoutInflater
 import android.view.View
@@ -23,17 +25,25 @@ class StockAdapter(private val stockList: MutableList<Stock>) :
         return StockViewHolder(itemView)
     }
 
-    private fun setupChartStyle(chart: LineChart) {
+    private fun setupChartStyle(chart: LineChart, context: Context) {
+        val textColor = if (context.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK == Configuration.UI_MODE_NIGHT_YES) {
+            Color.WHITE
+        } else {
+            Color.BLACK
+        }
         chart.apply {
             setDrawGridBackground(false)
             description.isEnabled = false
             legend.isEnabled = true
+            legend.textColor = textColor // 設置圖例文字顏色
             axisLeft.isEnabled = true
             axisLeft.setDrawGridLines(false)
+            axisLeft.textColor = textColor // 設置左軸文字顏色
             axisRight.isEnabled = false
             xAxis.isEnabled = true
             xAxis.position = XAxis.XAxisPosition.BOTTOM
             xAxis.setDrawGridLines(false)
+            xAxis.textColor = textColor // 設置X軸文字顏色
         }
     }
 
@@ -42,6 +52,9 @@ class StockAdapter(private val stockList: MutableList<Stock>) :
             position = XAxis.XAxisPosition.BOTTOM
             setDrawGridLines(false)
             granularity = 1f
+
+            labelRotationAngle = -45f
+            setLabelCount(6, true)
 
             val xAxisLabels = ArrayList<String>()
             for ((key, _) in timeSeries) {
@@ -68,7 +81,7 @@ class StockAdapter(private val stockList: MutableList<Stock>) :
             index++
         }
 
-        setupChartStyle(holder.stockLineChart);
+        setupChartStyle(holder.stockLineChart, holder.itemView.context)
         holder.stockLineChart.animateX(1500, Easing.EaseInOutQuart)
         setupXAxisLabels(holder.stockLineChart, stock.getTimeSeries())
 

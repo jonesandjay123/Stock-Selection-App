@@ -17,7 +17,6 @@ import java.text.SimpleDateFormat
 import java.util.*
 import okhttp3.*
 import org.json.JSONObject
-import java.io.IOException
 
 class MainActivity : AppCompatActivity(), CoroutineScope {
 
@@ -73,13 +72,11 @@ class MainActivity : AppCompatActivity(), CoroutineScope {
                 // Do nothing, since we are only interested in swipe to delete
                 return false
             }
-
             override fun onSwiped(viewHolder: RecyclerView.ViewHolder, direction: Int) {
                 val position = viewHolder.adapterPosition
                 stockAdapter.removeItem(position)
             }
         })
-
         itemTouchHelper.attachToRecyclerView(recyclerView)
     }
 
@@ -126,7 +123,8 @@ class MainActivity : AppCompatActivity(), CoroutineScope {
             .setMessage("Enter the stock symbol:")
             .setView(input)
             .setPositiveButton("Add") { _, _ ->
-                val symbol = input.text.toString().trim()
+                val symbol =
+                    input.text.toString().trim().uppercase(Locale.getDefault()) // 將股票代號轉換為大寫
                 if (symbol.isNotEmpty()) {
                     launch {
                         val timeSeries = fetchStockData(symbol)
