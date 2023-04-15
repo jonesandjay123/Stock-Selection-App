@@ -8,6 +8,7 @@ import android.view.Menu
 import android.view.MenuItem
 import android.widget.EditText
 import android.widget.TextView
+import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.recyclerview.widget.ItemTouchHelper
 import com.example.stockselectionapp.databinding.ActivityMainBinding
@@ -92,7 +93,7 @@ class MainActivity : AppCompatActivity(), CoroutineScope {
         versionTextView.text = "Version $versionName.$timeStampString"
     }
 
-    private suspend fun fetchStockData(symbol: String): Map<String, Map<String, String>> {
+    private suspend fun fetchStockData(symbol: String): Map<String, Map<String, String>>? {
         val apiKey = readApiSecrets()
         val url = "https://www.alphavantage.co/query?function=TIME_SERIES_INTRADAY&symbol=$symbol&interval=5min&apikey=$apiKey"
 
@@ -101,20 +102,25 @@ class MainActivity : AppCompatActivity(), CoroutineScope {
             .build()
 
         return withContext(Dispatchers.IO) {
-            val response = client.newCall(request).execute()
-            val jsonData = response.body?.string()
-            val jsonObject = JSONObject(jsonData)
-            val timeSeries = jsonObject.getJSONObject("Time Series (5min)")
+            try {
+                val response = client.newCall(request).execute()
+                val jsonData = response.body?.string()
+                val jsonObject = JSONObject(jsonData)
+                val timeSeries = jsonObject.getJSONObject("Time Series (5min)")
 
-            val result = mutableMapOf<String, Map<String, String>>()
-            for (key in timeSeries.keys()) {
-                val value = timeSeries.getJSONObject(key)
-                val entries = value.keys().asSequence().associateWith { value.getString(it) }
-                result[key] = entries
+                val result = mutableMapOf<String, Map<String, String>>()
+                for (key in timeSeries.keys()) {
+                    val value = timeSeries.getJSONObject(key)
+                    val entries = value.keys().asSequence().associateWith { value.getString(it) }
+                    result[key] = entries
+                }
+                result
+            } catch (e: Exception) {
+                null
             }
-            result
         }
     }
+
 
     private fun showAddStockDialog() {
         val input = EditText(this)
@@ -123,13 +129,16 @@ class MainActivity : AppCompatActivity(), CoroutineScope {
             .setMessage("Enter the stock symbol:")
             .setView(input)
             .setPositiveButton("Add") { _, _ ->
-                val symbol =
-                    input.text.toString().trim().uppercase(Locale.getDefault()) // 將股票代號轉換為大寫
+                val symbol = input.text.toString().trim()
                 if (symbol.isNotEmpty()) {
                     launch {
                         val timeSeries = fetchStockData(symbol)
-                        stockSymbols.add(Stock(symbol, timeSeries))
-                        stockAdapter.notifyItemInserted(stockSymbols.size - 1)
+                        if (timeSeries != null) {
+                            stockSymbols.add(Stock(symbol, timeSeries))
+                            stockAdapter.notifyItemInserted(stockSymbols.size - 1)
+                        } else {
+                            showToast("Invalid stock symbol or data not available.")
+                        }
                     }
                 }
             }
@@ -138,6 +147,11 @@ class MainActivity : AppCompatActivity(), CoroutineScope {
 
         alertDialog.show()
     }
+
+    private fun showToast(message: String) {
+        Toast.makeText(this, message, Toast.LENGTH_LONG).show()
+    }
+
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
         // Inflate the menu; this adds items to the action bar if it is present.
